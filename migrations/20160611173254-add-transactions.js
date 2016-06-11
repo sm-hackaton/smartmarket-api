@@ -2,22 +2,23 @@ var dbm = global.dbm || require('db-migrate');
 var type = dbm.dataType;
 
 exports.up = function(db, next) {
-    db.createTable('devices', {
+    db.createTable('transactions', {
         id: {type: 'int', primaryKey: true, autoIncrement: true},
         uuid: {type: 'string', unique: true},
-        account_id: {
+        amount: {type: 'decimal', length: '19,3'},
+        device_id: {
             type: 'int',
             foreignKey: {
-                name: 'devices_account_id_fk',
+                name: 'transactions_device_id_fk',
                 mapping: 'id',
-                table: 'accounts',
+                table: 'devices',
                 rules: {onUpdate: 'CASCADE', onDelete: 'CASCADE'}
             }
         },
-        description: {type: 'string', notNull: false}
+        status: {type: 'int'}
     }, next);
 };
 
 exports.down = function(db, next) {
-    db.dropTable('devices', next);
+    db.dropTable('transactions', next);
 };

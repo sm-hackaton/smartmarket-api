@@ -2,29 +2,29 @@ var _ = require('lodash'),
     db = require('./DatabaseService.js'),
     uuid = require('uuid');
 
-module.exports = {
+var DeviceService = {
     findDeviceById: function(id, next) {
         db.query('select * from devices where id = ?', [id], function(err, rows) {
             if (err) throw err;
-            next(rows.length && rows[0] || null);
+            next(null, rows.length && rows[0] || null);
         });
     },
     findDeviceByUuid: function(uuid, next) {
         db.query('select * from devices where uuid = ?', [uuid], function(err, rows) {
             if (err) throw err;
-            next(rows.length && rows[0] || null);
+            next(null, rows.length && rows[0] || null);
         });
     },
     getDevices: function(next) {
         db.query('select * from devices', function(err, rows) {
             if (err) throw err;
-            next(rows);
+            next(null, rows);
         });
     },
     getDevicesWithAccountId: function(accountId, next) {
         db.query('select * from devices where account_id = ?', [accountId], function(err, rows) {
             if (err) throw err;
-            next(rows);
+            next(null, rows);
         });
     },
     createDevice: function(fields, next) {
@@ -34,7 +34,7 @@ module.exports = {
             account_id: fields.account_id
         }, function(err, result) {
             if (err) throw err;
-            module.exports.findDeviceById(result.insertId, next);
+            DeviceService.findDeviceById(result.insertId, next);
         });
     },
     updateDeviceById: function(id, fields, next) {
@@ -42,12 +42,14 @@ module.exports = {
 
         db.query('update devices set ? where id = '+id, fieldsToUpdate, function(err, result) {
             if (err) throw err;
-            module.exports.findAccountById(id, next);
+            DeviceService.findAccountById(id, next);
         });
     },
     updateDeviceByUuid: function(uuid, fields, next) {
-        module.exports.findDeviceByUuid(uuid, function(device) {
-            module.exports.updateDeviceById(device.id, fields, next);
+        DeviceService.findDeviceByUuid(uuid, function(err, device) {
+            DeviceService.updateDeviceById(device.id, fields, next);
         });
     }
 };
+
+module.exports = DeviceService;
