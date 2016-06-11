@@ -1,5 +1,6 @@
 var _ = require('lodash'),
     express = require('express'),
+    cors = require('cors'),
     bodyParser = require('body-parser');
 
 var DatabaseService = require('./services/DatabaseService.js'),
@@ -66,6 +67,8 @@ process.on('SIGINT', function() {
 var app = express(),
     router = express.Router();
 
+// allow cross-origin requests
+app.use(cors());
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
 // parse application/json
