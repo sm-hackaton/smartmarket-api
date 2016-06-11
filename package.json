@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "body-parser": "^1.15.1",
+    "dotenv": "^2.0.0",
+    "express": "^4.13.4",
+    "lodash": "^4.13.1",
+    "mysql": "^2.11.1",
+    "uuid": "^2.0.2"
+  },
+  "devDependencies": {
+    "db-migrate": "^0.9.25",
+    "tape": "^4.5.1"
+  },
+  "scripts": {
+    "start": "node --require dotenv/config app.js",
+    "migrate": "node --require dotenv/config node_modules/db-migrate/bin/db-migrate --config migrations/database.json --env dev"
+  }
+}
