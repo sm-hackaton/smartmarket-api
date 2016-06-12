@@ -25,7 +25,9 @@ exports.up = function(db, next) {
         req_token: {type: 'string'},
         req_secret: {type: 'string'},
         access_token: {type: 'string'},
-        access_secret: {type: 'string'}
+        access_secret: {type: 'string'},
+        address: {type: 'string'},
+        phone: {type: 'string'}
     }, next);
 };
 

@@ -19,14 +19,6 @@ exports.run = function(next) {
     funcs.push(function(next) {
         DeviceService.createDevice({
             manager_id: 1,
-            seller_id: 3,
-            description: faker.lorem.sentence()
-        }, next);
-    });
-
-    funcs.push(function(next) {
-        DeviceService.createDevice({
-            manager_id: 1,
             seller_id: 4,
             description: faker.lorem.sentence()
         }, next);
@@ -34,7 +26,7 @@ exports.run = function(next) {
 
     funcs.push(function(next) {
         DeviceService.createDevice({
-            manager_id: 2,
+            manager_id: 1,
             seller_id: 5,
             description: faker.lorem.sentence()
         }, next);
@@ -42,8 +34,40 @@ exports.run = function(next) {
 
     funcs.push(function(next) {
         DeviceService.createDevice({
-            manager_id: 2,
+            manager_id: 1,
             seller_id: 6,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 7,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 8,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 9,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 10,
             description: faker.lorem.sentence()
         }, next);
     });
