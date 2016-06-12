@@ -174,7 +174,11 @@ app.use(bodyParser.json());
 router.post('/auth', function(req, res) {
     AccountService.authenticate(req.body.username, req.body.password, function(err, success, account) {
         if (success) {
-            res.json({account: filterAccountFields(account)});
+            AccountService.findAccountById(account.id, function(err, account) {
+                loadAccountsRelations([account], function(err, accounts) {
+                    res.json({account: accounts[0]});
+                });
+            });
         } else {
             res.status(401).json({message: 'Unauthorized, invalid credentials'});
         }
