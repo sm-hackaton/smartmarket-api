@@ -1,4 +1,5 @@
-var oauth = require('oauth');
+var oauth = require('oauth'),
+    util = require('util');
 
 // To get the values for the following fields, please register your client here:
 // https://apisandbox.openbankproject.com/consumer-registration
@@ -38,10 +39,44 @@ module.exports = function(confirmUrl, consumerKey, consumerSecret) {
                 }
             );
         },
-        getBanks: function(accessToken, accessSecret, next) {
-            consumer.get(baseUrl+'/obp/v1.2.1/banks', accessToken, accessSecret, function(err, data) {
-                if (err) throw err;
+        getBanks: function(account, next) {
+            var url = baseUrl+'/obp/v1.2.1/banks';
+            consumer.get(url, account.access_token, account.access_secret, function(err, data) {
+                if (err) {
+                    console.error('error: '+util.inspect(err));
+                    throw err;
+                }
                 next(null, JSON.parse(data).banks);
+            });
+        },
+        getViews: function(account, next) {
+            var url = baseUrl+'/obp/v1.2.1/banks/'+account.bank_id+'/accounts/'+account.account_id+'/views';
+            consumer.get(url, account.access_token, account.access_secret, function(err, data) {
+                if (err) {
+                    console.error('error: '+util.inspect(err));
+                    throw err;
+                }
+                next(null, JSON.parse(data));
+            });
+        },
+        getTransactions: function(account, next) {
+            var url = baseUrl+'/obp/v1.2.1/banks/'+account.bank_id+'/accounts/'+account.account_id+'/owner/transactions';
+            consumer.get(url, account.access_token, account.access_secret, function(err, data) {
+                if (err) {
+                    console.error('error: '+util.inspect(err));
+                    throw err;
+                }
+                next(null, JSON.parse(data));
+            });
+        },
+        createTransaction: function(account, fields, next) {
+            var url = baseUrl+'/obp/v1.2.1/banks/'+account.bank_id+'/accounts/'+account.account_id+'/owner/transactions';
+            consumer.post(url, account.access_token, account.access_secret, fields, function(err, data) {
+                if (err) {
+                    console.error('error: '+util.inspect(err));
+                    throw err;
+                }
+                next(null, JSON.parse(data));
             });
         }
     }

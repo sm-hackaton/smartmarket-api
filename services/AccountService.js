@@ -70,8 +70,8 @@ var AccountService = {
     },
     updateAccountById: function(id, fields, next) {
         var fieldsToUpdate = _.pick(fields, [
-            'name', 'consumer_key', 'consumer_secret', 'req_token', 'req_secret',
-            'access_token', 'access_secret'
+            'name', 'bank_id', 'account_id', 'consumer_key', 'consumer_secret',
+            'req_token', 'req_secret', 'access_token', 'access_secret'
         ]);
 
         db.query('update accounts set ? where id = '+id, fieldsToUpdate, function(err, result) {

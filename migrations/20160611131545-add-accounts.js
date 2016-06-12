@@ -20,6 +20,8 @@ exports.up = function(db, next) {
         last_name: {type: 'string'},
         password: {type: 'string'},
         type: {type: 'int'},
+        bank_id: {type: 'string'},
+        account_id: {type: 'string'},
         consumer_key: {type: 'string'},
         consumer_secret: {type: 'string'},
         req_token: {type: 'string'},

@@ -8,6 +8,7 @@ var _ = require('lodash'),
 exports.run = function(next) {
     var funcs = [];
 
+    // id 1
     funcs.push(function(next) {
         DeviceService.createDevice({
             manager_id: 1,
@@ -16,6 +17,7 @@ exports.run = function(next) {
         }, next);
     });
 
+    // id 2
     funcs.push(function(next) {
         DeviceService.createDevice({
             manager_id: 1,
@@ -82,7 +84,7 @@ exports.run = function(next) {
     for (var i = 0; i < numDevices; i++) {
         funcs.push(function(next) {
             TransactionService.createTransaction({
-                device_id: (i % numDevices)+1,
+                device_id: 1,
                 status: statusArr[_.random(0, statusArr.length-1)],
                 amount: _.random(5, 80)
             }, next);
