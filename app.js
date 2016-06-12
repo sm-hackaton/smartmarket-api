@@ -218,13 +218,30 @@ router.put('/accounts/:uuid', function(req, res) {
     });
 });
 
+router.get('/accounts/:uuid/setup-obc', function(req, res) {
+    AccountService.findAccountByUuid(req.params.uuid, function(err, account) {
+        var oauthConfirmUrl = 'http://localhost:8080/accounts/'+req.params.uuid+'/setup-obc-confirm',
+            obank = OpenBankService(oauthConfirmUrl, account.consumer_key, account.consumer_secret);
+
+        obank.getRequestToken(function(err, requestToken, requestTokenSecret) {
+            AccountService.updateAccountByUuid(req.params.uuid, {
+                req_token: requestToken,
+                req_secret: requestTokenSecret
+            }, function() {
+                var authorizeUrl = obank.getAuthorizeUrl(requestToken);
+                res.json({authorize_url: authorizeUrl});
+            });
+        });
+    });
+});
+
 router.post('/accounts/:uuid/setup-obc', function(req, res) {
-    if (!req.body.obc_key) {
-        return res.status(400).json({message: "required field 'obc_key' is missing"});
+    if (!req.body.consumer_key) {
+        return res.status(400).json({message: "required field 'consumer_key' is missing"});
     }
 
-    if (!req.body.obc_secret) {
-        return res.status(400).json({message: "required field 'obc_secret' is missing"});
+    if (!req.body.consumer_secret) {
+        return res.status(400).json({message: "required field 'consumer_secret' is missing"});
     }
 
     if (!req.body.bank_id) {
@@ -236,14 +253,14 @@ router.post('/accounts/:uuid/setup-obc', function(req, res) {
     }
 
     var oauthConfirmUrl = 'http://localhost:8080/accounts/'+req.params.uuid+'/setup-obc-confirm',
-        obank = OpenBankService(oauthConfirmUrl, req.body.obc_key, req.body.obc_secret);
+        obank = OpenBankService(oauthConfirmUrl, req.body.consumer_key, req.body.consumer_secret);
 
     obank.getRequestToken(function(err, requestToken, requestTokenSecret) {
         AccountService.updateAccountByUuid(req.params.uuid, {
             bank_id: req.body.bank_id,
             account_id: req.body.account_id,
-            consumer_key: req.body.obc_key,
-            consumer_secret: req.body.obc_secret,
+            consumer_key: req.body.consumer_key,
+            consumer_secret: req.body.consumer_secret,
             req_token: requestToken,
             req_secret: requestTokenSecret
         }, function() {
@@ -301,11 +318,11 @@ router.get('/accounts/:uuid/trans', function(req, res) {
 });
 
 router.post('/accounts/:uuid/trans', function(req, res) {
-    if (!req.query.device_uuid) {
+    if (!req.body.device_uuid) {
         return res.status(400).json({message: "required field 'device_uuid' is missing"});
     }
 
-    if (!req.query.amount) {
+    if (!req.body.amount) {
         return res.status(400).json({message: "required field 'amount' is missing"});
     }
 
@@ -313,12 +330,12 @@ router.post('/accounts/:uuid/trans', function(req, res) {
         var oauthConfirmUrl = 'http://localhost:8080/accounts/'+account.uuid+'/setup-obc-confirm',
             obank = OpenBankService(oauthConfirmUrl, account.consumer_key, account.consumer_secret);
 
-        DeviceService.findDeviceByUuid(req.query.device_uuid, function(err, device) {
+        DeviceService.findDeviceByUuid(req.body.device_uuid, function(err, device) {
             AccountService.findAccountById(device.seller_id, function(err, seller) {
                 obank.createTransaction(account, {
                     bank_id: seller.bank_id,
                     account_id: seller.account_id,
-                    amount: req.query.amount
+                    amount: req.body.amount
                 }, function(err, banks) {
                     res.json({banks: banks});
                 });
