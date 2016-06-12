@@ -5,7 +5,11 @@ var _ = require('lodash'),
 
 var AccountService = {
     authenticate: function(username, password, next) {
-        AccountService.findAccountByUsername(username, function(account) {
+        AccountService.findAccountByUsername(username, function(err, account) {
+            if (!account) {
+                return next(null, false);
+            }
+
             bcrypt.compare(password, account.password, function(err, doesMatch) {
                 next(null, doesMatch, doesMatch && account);
             });

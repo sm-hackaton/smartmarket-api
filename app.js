@@ -74,7 +74,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // parse application/json
 app.use(bodyParser.json());
 
-router.get('/auth', function(req, res) {
+router.post('/auth', function(req, res) {
     AccountService.authenticate(req.body.username, req.body.password, function(err, success, account) {
         if (success) {
             res.json({account: filterAccountFields(account)});
