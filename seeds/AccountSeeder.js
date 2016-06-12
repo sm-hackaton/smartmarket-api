@@ -18,16 +18,6 @@ exports.run = function(next) {
 
     // id 2
     funcs.push(function(next) {
-        AccountService.createManagerAccount({
-            username: 'manager2@mail.com',
-            first_name: faker.name.firstName(),
-            last_name: faker.name.lastName(),
-            password: 'secret'
-        }, next);
-    });
-
-    // id 3
-    funcs.push(function(next) {
         AccountService.createSellerAccount({
             manager_id: 1,
             username: 'seller1@mail.com',
@@ -37,32 +27,10 @@ exports.run = function(next) {
         }, next);
     });
 
-    // id 4
     funcs.push(function(next) {
         AccountService.createSellerAccount({
             manager_id: 1,
             username: 'seller2@mail.com',
-            first_name: faker.name.firstName(),
-            last_name: faker.name.lastName(),
-            password: 'secret'
-        }, next);
-    });
-
-    // id 5
-    funcs.push(function(next) {
-        AccountService.createSellerAccount({
-            manager_id: 2,
-            username: 'seller3@mail.com',
-            first_name: faker.name.firstName(),
-            last_name: faker.name.lastName(),
-            password: 'secret'
-        }, next);
-    });
-
-    funcs.push(function(next) {
-        AccountService.createSellerAccount({
-            manager_id: 2,
-            username: 'seller4@mail.com',
             first_name: faker.name.firstName(),
             last_name: faker.name.lastName(),
             password: 'secret'
