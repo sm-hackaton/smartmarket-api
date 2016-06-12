@@ -21,8 +21,14 @@ var DeviceService = {
             next(null, rows);
         });
     },
-    getDevicesWithAccountId: function(accountId, next) {
-        db.query('select * from devices where account_id = ?', [accountId], function(err, rows) {
+    getDevicesWithManagerId: function(accountId, next) {
+        db.query('select * from devices where manager_id = ?', [accountId], function(err, rows) {
+            if (err) throw err;
+            next(null, rows);
+        });
+    },
+    getDevicesWithSellerId: function(accountId, next) {
+        db.query('select * from devices where seller_id = ?', [accountId], function(err, rows) {
             if (err) throw err;
             next(null, rows);
         });
@@ -31,14 +37,15 @@ var DeviceService = {
         db.query('insert into devices set ?', {
             uuid: uuid.v4(),
             description: fields.description,
-            account_id: fields.account_id
+            manager_id: fields.manager_id,
+            seller_id: fields.seller_id
         }, function(err, result) {
             if (err) throw err;
             DeviceService.findDeviceById(result.insertId, next);
         });
     },
     updateDeviceById: function(id, fields, next) {
-        var fieldsToUpdate = _.pick(fields, ['description']);
+        var fieldsToUpdate = _.pick(fields, ['description', 'manager_id', 'seller_id']);
 
         db.query('update devices set ? where id = '+id, fieldsToUpdate, function(err, result) {
             if (err) throw err;

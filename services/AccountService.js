@@ -46,7 +46,8 @@ var AccountService = {
                 username: fields.username,
                 first_name: fields.first_name,
                 last_name: fields.last_name,
-                password: hash
+                password: hash,
+                type: fields.type
             }, function(err, result) {
                 if (err) throw err;
                 AccountService.findAccountById(result.insertId, function(err, account) {
@@ -55,8 +56,23 @@ var AccountService = {
             });
         });
     },
+    createManagerAccount: function(fields, next) {
+        fields.type = AccountService.TYPE_MANAGER;
+        AccountService.createAccount(fields, next);
+    },
+    createSellerAccount: function(fields, next) {
+        fields.type = AccountService.TYPE_SELLER;
+        AccountService.createAccount(fields, next);
+    },
+    createBuyerAccount: function(fields, next) {
+        fields.type = AccountService.TYPE_BUYER;
+        AccountService.createAccount(fields, next);
+    },
     updateAccountById: function(id, fields, next) {
-        var fieldsToUpdate = _.pick(fields, ['name']);
+        var fieldsToUpdate = _.pick(fields, [
+            'name', 'consumer_key', 'consumer_secret', 'req_token', 'req_secret',
+            'access_token', 'access_secret'
+        ]);
 
         db.query('update accounts set ? where id = '+id, fieldsToUpdate, function(err, result) {
             if (err) throw err;
@@ -69,5 +85,11 @@ var AccountService = {
         });
     }
 };
+
+AccountService.TYPE_MANAGER = 1;
+
+AccountService.TYPE_SELLER = 2;
+
+AccountService.TYPE_BUYER = 3;
 
 module.exports = AccountService;

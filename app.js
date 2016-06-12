@@ -1,4 +1,5 @@
 var _ = require('lodash'),
+    async = require('async'),
     express = require('express'),
     cors = require('cors'),
     bodyParser = require('body-parser');
@@ -6,7 +7,8 @@ var _ = require('lodash'),
 var DatabaseService = require('./services/DatabaseService.js'),
     AccountService = require('./services/AccountService.js'),
     DeviceService = require('./services/DeviceService.js'),
-    TransactionService = require('./services/TransactionService.js');
+    TransactionService = require('./services/TransactionService.js'),
+    OpenBankService = require('./services/OpenBankService.js');
 
 function filterFields(obj, fields, reverse) {
     var isSingleObj = !Array.isArray(obj);
@@ -36,16 +38,111 @@ function filterFields(obj, fields, reverse) {
 }
 
 function filterAccountFields(obj) {
-    return filterFields(obj, ['id', 'password'], true);
+    return filterFields(obj, ['uuid', 'username', 'first_name', 'last_name']);
 }
 
 function filterDeviceFields(obj) {
-    return filterFields(obj, ['id'], true);
+    return filterFields(obj, ['uuid', 'description']);
 }
 
 function filterTransactionFields(obj) {
     return filterFields(obj, ['id'], true);
 }
+
+function loadAccountsRelations(accounts, next) {
+    var funcs = [];
+
+    var strAccounts = {};
+    strAccounts[AccountService.TYPE_MANAGER] = 'manager';
+    strAccounts[AccountService.TYPE_SELLER] = 'seller';
+    strAccounts[AccountService.TYPE_BUYER] = 'buyer';
+
+    accounts.forEach(function(account) {
+        account.type = strAccounts[account.type];
+
+        funcs.push(function(next) {
+            if (account.type === AccountService.TYPE_MANAGER) {
+                DeviceService.getDevicesWithManagerId(account.id, function(err, devices) {
+                    account.devices = filterDeviceFields(devices);
+                    next();
+                });
+            } else if (account.type === AccountService.TYPE_SELLER) {
+                DeviceService.getDevicesWithSellerId(account.id, function(err, devices) {
+                    account.devices = filterDeviceFields(devices);
+                    next();
+                });
+            } else {
+                next();
+            }
+        });
+    });
+
+    async.series(funcs, function() {
+        filterFields(accounts, ['uuid', 'username', 'first_name', 'last_name', 'type', 'devices']);
+        next(null, accounts);
+    });
+}
+
+function loadDevicesRelations(devices, next) {
+    var funcs = [];
+
+    devices.forEach(function(device) {
+        funcs.push(function(next) {
+            if (device.seller_id) {
+                 AccountService.findAccountById(device.seller_id, function(err, account) {
+                    device.seller = filterAccountFields(account);
+                    next();
+                });
+            } else {
+                device.seller = null;
+                next();
+            }
+        });
+
+        funcs.push(function(next) {
+            if (device.manager_id) {
+                 AccountService.findAccountById(device.manager_id, function(err, account) {
+                    device.manager = filterAccountFields(account);
+                    next();
+                });
+            } else {
+                device.manager = null;
+                next();
+            }
+        });
+    });
+
+    async.series(funcs, function() {
+        filterFields(devices, ['uuid', 'description', 'seller', 'manager']);
+        next(null, devices);
+    });
+}
+
+function loadTransactionsRelations(transactions, next) {
+    var funcs = [];
+
+    var strStatus = {};
+    strStatus[TransactionService.STATUS_PENDING] = 'pending';
+    strStatus[TransactionService.STATUS_ACCEPTED] = 'accepted';
+    strStatus[TransactionService.STATUS_REJECTED] = 'rejected';
+
+    transactions.forEach(function(transaction) {
+        transaction.status = strStatus[transaction.status];
+
+        funcs.push(function(next) {
+            DeviceService.findDeviceById(transaction.device_id, function(err, device) {
+                transaction.device = filterDeviceFields(device);
+                next();
+            });
+        });
+    });
+
+    async.series(funcs, function() {
+        filterFields(transactions, ['uuid', 'status', 'device', 'amount']);
+        next(null, transactions);
+    });
+}
+
 
 DatabaseService.connect({
     host: process.env.DB_HOST,
@@ -97,16 +194,16 @@ router.post('/accounts', function(req, res) {
 
 router.get('/accounts', function(req, res) {
     AccountService.getAccounts(function(err, accounts) {
-        res.json({accounts: filterAccountFields(accounts)});
+        loadAccountsRelations(accounts, function(err, accounts) {
+            res.json({accounts: accounts});
+        });
     });
 });
 
 router.get('/accounts/:uuid', function(req, res) {
     AccountService.findAccountByUuid(req.params.uuid, function(err, account) {
-        DeviceService.getDevicesWithAccountId(account.id, function(err, devices) {
-            account = filterAccountFields(account);
-            account.devices = filterDeviceFields(devices);
-            res.json({account: account});
+        loadAccountsRelations([account], function(err, accounts) {
+            res.json({account: accounts[0]});
         });
     });
 });
@@ -117,15 +214,76 @@ router.put('/accounts/:uuid', function(req, res) {
     });
 });
 
-router.post('/devices', function(req, res) {
-    if (!req.body.account_uuid) {
-        return res.status(400).json({message: "required field 'account_uuid' is missing"});
+router.post('/accounts/:uuid/setup-obc', function(req, res) {
+    if (!req.body.obc_key) {
+        return res.status(400).json({message: "required field 'obc_key' is missing"});
     }
 
-    AccountService.findAccountByUuid(req.body.account_uuid, function(err, account) {
+    if (!req.body.obc_secret) {
+        return res.status(400).json({message: "required field 'obc_secret' is missing"});
+    }
+
+    var oauthConfirmUrl = 'http://localhost:8080/accounts/'+req.params.uuid+'/setup-obc-confirm',
+        obank = OpenBankService(oauthConfirmUrl, req.body.obc_key, req.body.obc_secret);
+
+    obank.getRequestToken(function(err, requestToken, requestTokenSecret) {
+        AccountService.updateAccountByUuid(req.params.uuid, {
+            consumer_key: req.body.obc_key,
+            consumer_secret: req.body.obc_secret,
+            req_token: requestToken,
+            req_secret: requestTokenSecret
+        }, function() {
+            var authorizeUrl = obank.getAuthorizeUrl(requestToken);
+            res.json({authorize_url: authorizeUrl});
+        });
+    });
+});
+
+router.get('/accounts/:uuid/setup-obc-confirm', function(req, res) {
+    if (!req.query.oauth_verifier) {
+        return res.status(400).json({message: "required field 'oauth_verifier' is missing"});
+    }
+
+    AccountService.findAccountByUuid(req.params.uuid, function(err, account) {
+        var oauthConfirmUrl = 'http://localhost:8080/accounts/'+account.uuid+'/setup-obc-confirm',
+            obank = OpenBankService(oauthConfirmUrl, account.consumer_key, account.consumer_secret);
+
+        obank.getAccessToken(
+            account.req_token,
+            account.req_secret,
+            req.query.oauth_verifier,
+            function(err, accessToken, accessSecret) {
+                AccountService.updateAccountById(account.id, {
+                    access_token: accessToken,
+                    access_secret: accessSecret
+                }, function() {
+                    res.json({success: true});
+                });
+            }
+        );
+    });
+});
+
+router.get('/accounts/:uuid/banks', function(req, res) {
+    AccountService.findAccountByUuid(req.params.uuid, function(err, account) {
+        var oauthConfirmUrl = 'http://localhost:8080/accounts/'+account.uuid+'/setup-obc-confirm',
+            obank = OpenBankService(oauthConfirmUrl, account.consumer_key, account.consumer_secret);
+
+        obank.getBanks(account.access_token, account.access_secret, function(err, banks) {
+            res.json({banks: banks});
+        });
+    });
+});
+
+router.post('/devices', function(req, res) {
+    if (!req.body.manager_uuid) {
+        return res.status(400).json({message: "required field 'manager_uuid' is missing"});
+    }
+
+    AccountService.findAccountByUuid(req.body.manager_uuid, function(err, account) {
         DeviceService.createDevice({
             description: req.body.description,
-            account_id: account.id
+            manager_id: account.id
         }, function(err, device) {
             res.json({device: filterDeviceFields(device)});
         });
@@ -134,29 +292,31 @@ router.post('/devices', function(req, res) {
 
 router.get('/devices', function(req, res) {
     DeviceService.getDevices(function(err, devices) {
-        res.json({devices: filterDeviceFields(devices)});
+        loadDevicesRelations(devices, function(err, devices) {
+            res.json({devices: devices});
+        });
     });
 });
 
 router.get('/devices/:uuid', function(req, res) {
     DeviceService.findDeviceByUuid(req.params.uuid, function(err, device) {
-        AccountService.findAccountById(device.account_id, function(err, account) {
-            device = filterDeviceFields(device);
-            device.account = filterAccountFields(account);
-            res.json({device: device});
-        });
+        loadDevicesRelations([device], function(err, devices) {
+            res.json({device: devices[0]});
+        })
     });
 });
 
 router.put('/devices/:uuid', function(req, res) {
     DeviceService.updateDeviceByUuid(req.params.uuid, req.body, function(err, device) {
-        res.json({device: filterDeviceFields(device)});
+        res.json({device: device});
     });
 });
 
 router.get('/transactions', function(req, res) {
     TransactionService.getTransactions(function(err, transactions) {
-        res.json({transactions: filterTransactionFields(transactions)});
+        loadTransactionsRelations(transactions, function(err, transactions) {
+            res.json({transactions: transactions});
+        })
     });
 });
 

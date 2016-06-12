@@ -5,19 +5,20 @@ exports.up = function(db, next) {
     db.createTable('devices', {
         id: {type: 'int', primaryKey: true, autoIncrement: true},
         uuid: {type: 'string', unique: true},
-        owner_id: {
+        manager_id: {
             type: 'int',
             foreignKey: {
-                name: 'devices_owner_id_fk',
+                name: 'devices_manager_id_fk',
                 mapping: 'id',
                 table: 'accounts',
                 rules: {onUpdate: 'CASCADE', onDelete: 'CASCADE'}
             }
         },
-        account_id: {
+        seller_id: {
             type: 'int',
+            notNull: false,
             foreignKey: {
-                name: 'devices_account_id_fk',
+                name: 'devices_seller_id_fk',
                 mapping: 'id',
                 table: 'accounts',
                 rules: {onUpdate: 'CASCADE', onDelete: 'CASCADE'}

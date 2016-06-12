@@ -6,42 +6,64 @@ var _ = require('lodash'),
     TransactionService = require('../services/TransactionService.js');
 
 exports.run = function(next) {
-    AccountService.getAccounts(function(err, accounts) {
-        var funcs = [];
+    var funcs = [];
 
-        accounts.forEach(function(account) {
-            // make sure 'user1@mail.com' has 3 devices associated
-            var numDevices = (account.username === 'user1@mail.com') ? 5 : _.random(0, 2);
-
-            for (var i = 0; i < numDevices; i++) {
-                funcs.push(function(next) {
-                    DeviceService.createDevice({
-                        account_id: account.id,
-                        description: faker.lorem.sentence()
-                    }, function(err, device) {
-                        var transFuncs = [],
-                            numTransactions = _.random(1, 5),
-                            statusArr = [
-                                TransactionService.STATUS_PENDING,
-                                TransactionService.STATUS_ACCEPTED,
-                                TransactionService.STATUS_REJECTED
-                            ];
-
-                        for (var i = 0; i < numTransactions; i++) {
-                            transFuncs.push(function(next) {
-                                TransactionService.createTransaction({
-                                    device_id: device.id,
-                                    status: statusArr[_.random(0, statusArr.length-1)]
-                                }, next);
-                            });
-                        }
-
-                        async.series(transFuncs, next);
-                    });
-                });
-            }
-        });
-
-        async.series(funcs, next);
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 3,
+            description: faker.lorem.sentence()
+        }, next);
     });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 3,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 1,
+            seller_id: 4,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 2,
+            seller_id: 5,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    funcs.push(function(next) {
+        DeviceService.createDevice({
+            manager_id: 2,
+            seller_id: 6,
+            description: faker.lorem.sentence()
+        }, next);
+    });
+
+    var numDevices = funcs.length,
+        statusArr = [
+            TransactionService.STATUS_PENDING,
+            TransactionService.STATUS_ACCEPTED,
+            TransactionService.STATUS_REJECTED
+        ];
+
+    for (var i = 0; i < numDevices; i++) {
+        funcs.push(function(next) {
+            TransactionService.createTransaction({
+                device_id: (i % numDevices)+1,
+                status: statusArr[_.random(0, statusArr.length-1)],
+                amount: _.random(5, 80)
+            }, next);
+        });
+    }
+
+    async.series(funcs, next);
 };
